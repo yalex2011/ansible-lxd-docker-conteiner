@@ -10,25 +10,6 @@
     lxdname: ["{{ name_template }}"]
   when: lxdcount == 1
 
-- debug:
-    msg: "{{ lxdname }}"
-
-# - name: Create a started container
-#   lxd_container:
-#     name: "{{ lxdname | default(lxd-docker) }}"
-#     state: started
-#     source:
-#       type: image
-#       mode: pull
-#       server: https://images.linuxcontainers.org
-#       protocol: lxd
-#       alias: ubuntu/xenial/amd64
-#     profiles: ["default"]
-#     config: { "security.nesting": "true" }
-#     wait_for_ipv4_addresses: true
-#     timeout: 600
-#   register: lxd_container
-
 - name: Create a started container
   lxd_container:
     name: "{{ item }}"
@@ -46,36 +27,23 @@
   register: lxd_container
   loop: "{{ lxdname }}"
 
-- debug:
-    msg: "{{ item.addresses.eth0[0] }}"
-  loop: "{{ lxd_container.results }}"
-
 - name: register new container in inventary
   add_host:
     name: "{{ item }}"
     ansible_connection: lxd
   loop: "{{ lxdname }}"
+  changed_when: false
 
 - name: check python is installed in container
   delegate_to: "{{ item }}"
   raw: dpkg -s python
   loop: "{{ lxdname }}"
   register: python_install_check
-  failed_when: item.rc not in [0, 1]
-  #failed_when: python_install_check.results.rc not in [0, 1]
+  failed_when: python_install_check.rc not in [0, 1]
   changed_when: false
-
-# - debug:
-#     msg: "{{ item.rc }}"
-#   loop: "{{ python_install_check.results }}"
-
-# - fail:
-#     msg: Error!
-#   loop: "{{ python_install_check.results }}"
-#   when: item.rc not in [0, 1]
 
 - name: install python in container
   delegate_to: "{{ item }}"
   raw: apt-get install -y python
-  #when: python_install_check.rc == 1
+  when: python_install_check.results[0]['rc'] == 1
   loop: "{{ lxdname }}"
