@@ -47,3 +47,11 @@
   raw: apt-get install -y python
   when: python_install_check.results[0]['rc'] == 1
   loop: "{{ lxdname }}"
+
+- name: install docker.io
+  delegate_to: "{{ item }}"
+  apt:
+    name: docker.io
+    state: present
+    update_cache: yes
+  loop: "{{ lxdname }}"
